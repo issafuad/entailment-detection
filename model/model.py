@@ -9,7 +9,6 @@ def build_graph(training_setting):
     tf.reset_default_graph()
     graph = tf.Graph()
 
-
     with graph.as_default():
         with tf.name_scope('inputs') as name_scope:
             X_sent1 = tf.placeholder(tf.int32, [None, training_setting['maximum_sent_length']], name='x_sent1')
@@ -47,7 +46,8 @@ def build_graph(training_setting):
             word_embeddings_sent1 = tf.nn.embedding_lookup([reserved_embeddings, pretrained_embeddings], X_sent1,
                                                      name='word_embeddings_sent1')
             word_embeddings_sent2 = tf.nn.embedding_lookup([reserved_embeddings, pretrained_embeddings], X_sent2,
-                                                     name='word_embeddings_sent1')
+                                                     name='word_embeddings_sent2')
+            #word_embeddings_sent1 = tf_print(word_embeddings_sent1, 'word_embeddings_sent1')
 
         with tf.name_scope('gru_cell_sent1') as name_scope:
             gru_forward_sent1 = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
@@ -59,6 +59,7 @@ def build_graph(training_setting):
                                                                                         scope=name_scope)
             bidirectional_gru_output_sent1 = tf.concat(axis=2, values=(gru_output_forward, gru_output_backward),
                                                        name='output_sent1')
+            #bidirectional_gru_output_sent1 = tf_print(bidirectional_gru_output_sent1, 'bidirectional_gru_output_sent1')
 
         with tf.name_scope('gru_cell_sent2') as name_scope:
             gru_forward_sent2 = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
@@ -71,24 +72,28 @@ def build_graph(training_setting):
             bidirectional_gru_output_sent2 = tf.concat(axis=2,
                                                        values=(gru_output_forward, gru_output_backward),
                                                        name='output_sent2')
+            #bidirectional_gru_output_sent2 = tf_print(bidirectional_gru_output_sent2, 'bidirectional_gru_output_sent2')
 
         with tf.name_scope('concat') as name_scope:
             both_sentences_concat = tf.concat(axis=1,
                                               values=(bidirectional_gru_output_sent1, bidirectional_gru_output_sent2),
-                                              name='output_sent1')
-            #both_sentences_concat = tf.Print(both_sentences_concat, [both_sentences_concat], message='both_sentences_concat')
+                                              name='output_sentences')
+            #both_sentences_concat = tf_print(both_sentences_concat, 'both_sentences_concat')
 
         with tf.name_scope('pooling') as name_scope:
             W = tf.Variable(tf.random_normal([2 * training_setting['hidden_units']], name='attention_weight'))
             b = tf.Variable(tf.random_normal([1]), name='attention_bias')
+            #W = tf_print(W, 'W')
             attentions = tf.reduce_sum(tf.multiply(W, both_sentences_concat), axis=2) + b
             attentions = tf.nn.softmax(attentions)
+            #attentions = tf_print(attentions, 'attentions')
 
             expand_attentions = tf.expand_dims(attentions, 1)
             transpose_outputs = tf.transpose(both_sentences_concat, perm=[0, 2, 1])
 
             attentions_output = tf.reduce_sum(tf.transpose(tf.multiply(expand_attentions, transpose_outputs),
                                                            perm=[0, 2, 1]), axis=1)
+            #attentions_output = tf_print(attentions_output, 'attentions_output')
 
         with tf.name_scope('mlp') as name_scope:
             W_mlp = tf.Variable(
@@ -98,7 +103,6 @@ def build_graph(training_setting):
             logits = tf.matmul(attentions_output, W_mlp) + b_mlp
             probability = tf.nn.softmax(logits, name='probability')
             y_pred = tf.one_hot(tf.argmax(probability, 1), depth=training_setting['classes_num'], name='y_pred')
-            y_pred = tf.Print(y_pred, [y_pred], message='y_pred')
 
 
         with tf.name_scope('loss') as name_scope:
@@ -107,5 +111,8 @@ def build_graph(training_setting):
         with tf.name_scope('optimizer') as name_scope:
             optimizer = tf.train.AdadeltaOptimizer(learning_rate=training_setting['learning_rate']).minimize(loss,
                                                                                                              name='optimizer')
-
     return graph
+
+def tf_print(var, message):
+    return tf.Print(var, [tf.shape(var), var], message=message)
+
