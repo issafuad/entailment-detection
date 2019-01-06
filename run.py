@@ -13,9 +13,9 @@ training_settings = {
     'model_path': './trained_models/test/',
     'use_pretrained_embeddings': True,
     'embedding_size': 300,
-    'batch_size': 32,
+    'batch_size': 512,
     'hidden_units': 32,
-    'learning_rate': 0.5,
+    'learning_rate': 0.01,
     'patience': 1024000,
     'train_interval': 1,
     'valid_interval': 1,
@@ -29,7 +29,7 @@ training_settings = {
 
 def train(training_settings):
 
-    X_sent1, X_sent2, y = get_dataset(PROCESSED_DATA_FILE, limit=1000)
+    X_sent1, X_sent2, y = get_dataset(PROCESSED_DATA_FILE, limit=10000)
     LOGGER.info('Got dataset')
 
     all_sentences = X_sent1 + X_sent2
