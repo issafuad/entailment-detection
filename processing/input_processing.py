@@ -9,6 +9,10 @@ def get_dataset(file_path, limit=None):
     if limit:
         dataset_df = dataset_df.head(limit)
 
+    dataset_df['accepted'] = True
+    dataset_df.loc[dataset_df['gold_label'].apply(lambda x: x not in set(['contradiction', 'neutral', 'entailment'])),'accepted'] = False
+    dataset_df.drop(dataset_df[dataset_df['accepted'] == False].index, inplace=True)
+
     x_sent_1 = dataset_df['sentence1_tokenized'].tolist()
     x_sent_2 = dataset_df['sentence2_tokenized'].tolist()
 
@@ -17,11 +21,26 @@ def get_dataset(file_path, limit=None):
     return x_sent_1, x_sent_2, y
 
 def batcher(lists_to_batch, batch_size, infinite=False):
-    batched_lists = list()
+    length_of_list = len(lists_to_batch[0])
+    start_index = 0
     while True:
-        for start_index in range(0, len(lists_to_batch[0]), batch_size):
-            for list_to_batch in lists_to_batch:
-                batched_lists.append(list_to_batch[start_index: min(start_index + batch_size, len(list_to_batch))])
-            yield tuple(batched_lists)
-        if infinite:
-            break
+        new_start = False
+        batched_lists = list()
+        if start_index + batch_size < length_of_list:
+            end_index = start_index + batch_size
+        else:
+            end_index = length_of_list
+            new_start = True
+
+        for list_to_batch in lists_to_batch:
+            batched_lists.append(list_to_batch[start_index: end_index])
+
+        if new_start:
+            start_index = 0
+            if not infinite:
+                break
+        else:
+            start_index += batch_size
+
+        yield tuple(batched_lists), new_start
+    yield tuple(batched_lists), new_start

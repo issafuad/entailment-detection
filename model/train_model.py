@@ -13,7 +13,7 @@ from settings import TRAINED_MODELS_PATH, LOGGER
 
 MODEL_PATH = os.path.join(TRAINED_MODELS_PATH)
 CHECKPOINT = 'ckpt'
-TENSORBOARD_PATH = 'tb'
+TENSORBOARD_FOLDER = 'tb'
 
 def train_network(training_setting, train_batcher, valid_batcher, embedding, train_number_of_instances):
 
@@ -24,62 +24,54 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
             metric_summary.value.add(tag='{}_{}'.format(mode, name), simple_value=metric)
         summary_writer.add_summary(metric_summary, global_step=iteration)
 
-    def show_train_stats(epoch, iteration, losses, y_cat, y_cat_pred):
+    def show_train_stats(epoch, iteration, losses, y_true, y_pred):
         # compute mean statistics
         loss = np.mean(losses)
-        accuracy = accuracy_score(y_cat, y_cat_pred)
-        score = accuracy - loss
+        accuracy = accuracy_score(y_true, y_pred)
+        LOGGER.info('Epoch={}, Iter={:,}, Mean Training Loss={:.4f}, Accuracy={:.4f}, '.format(epoch, iteration, loss, accuracy))
+        add_metric_summaries('train', iteration, {'cross_entropy': loss, 'accuracy': accuracy})
+        LOGGER.info('\n{}'.format(classification_report(y_true, y_pred, digits=3)))
 
-        LOGGER.info('Epoch={}, Iter={:,}, Mean Training Loss={:.4f}, Accuracy={:.4f}, '
-                     'Accuracy - Loss={:.4f}'.format(epoch, iteration, loss, accuracy, score))
-        add_metric_summaries('train', iteration, {'cross_entropy': loss, 'accuracy': accuracy,
-                                                  'accuracy - loss': score})
-        LOGGER.info('\n{}'.format(classification_report(y_cat, y_cat_pred, digits=3)))
-        return list(), list(), list()
-
-    def validate(epoch, iteration, batecher, best_score, patience):
+    def validate(epoch, iteration, batcher, best_loss, patience):
         """Validate the model on validation set."""
 
         losses, y_true, y_pred = list(), list(), list()
-        for X_batch, y_true_batch in batecher:
+        for (X_batch_sent1, X_batch_sent2, y_true_batch), _ in batcher:
 
-            loss_batch, y_pred_batch = session.run(
-                [graph.get_operation_by_name('mlp/y_pred'),
-                 graph.get_operation_by_name('loss/loss')],
+            y_pred_batch, loss_batch = session.run(
+                [graph.get_tensor_by_name('mlp/y_pred:0'),
+                 graph.get_tensor_by_name('loss/loss:0')],
                 feed_dict={
-                    'inputs/x:0': X_batch,
+                    'inputs/x_sent1:0': X_batch_sent1,
+                    'inputs/x_sent2:0': X_batch_sent2,
                     'inputs/y:0': y_true_batch,
                     'inputs/dropout:0': 1
                 })
-            losses.append(loss_batch)
-            y_pred.extend(y_pred_batch)
-            y_true.extend(y_true_batch)
+            losses.extend(loss_batch.tolist())
+            y_pred.extend(np.argmax(y_pred_batch, axis=1))
+            y_true.extend(np.argmax(y_true_batch, axis=1))
 
         # compute mean statistics
         loss = np.mean(losses)
         accuracy = accuracy_score(y_true, y_pred)
-        score = accuracy - loss
 
-        LOGGER.info('Epoch={}, Iter={:,}, Validation Loss={:.4f}, Accuracy={:.4f}, '
-                     'Accuracy - Loss={:.4f}'.format(epoch, iteration, loss, accuracy, score))
-        add_metric_summaries('valid', iteration, {'cross_entropy': loss, 'accuracy': accuracy,
-                                                  'accuracy - loss': score})
-        LOGGER.info('\n{}'.format(classification_report(y_cat, y_cat_pred, digits=3)))
+        LOGGER.info('Epoch={}, Iter={:,}, Validation Loss={:.4f}, Accuracy={:.4f}'.format(epoch, iteration, loss, accuracy))
+        add_metric_summaries('valid', iteration, {'cross_entropy': loss, 'validation_accuracy': accuracy})
+        LOGGER.info('\n{}'.format(classification_report(y_true, y_pred, digits=3)))
 
-        if score > best_score:
-            LOGGER.info('Best score (Accuracy - Loss) so far, save the model.')
+        if loss < best_loss:
+            LOGGER.info('Best score Loss so far, save the model.')
             save()
-            best_score = score
+            best_loss = loss
 
             if iteration * 2 > patience:
                 patience = iteration * 2
                 LOGGER.info('Increased patience to {:,}'.format(patience))
-
-
-        return best_score, patience
+        return best_loss, patience
 
     def save():
         saver.save(session, os.path.join(training_setting['model_path'], CHECKPOINT))
+        LOGGER.info('Finished Saving')
 
     graph = build_graph(training_setting)
     pretrained_embeddings = embedding[training_setting['reserved_vocab_length']:]
@@ -87,47 +79,54 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
     best_valid_score = np.float64('-inf')
     with tf.Session(graph=graph) as session:
 
-        summary_writer = tf.summary.FileWriter(TENSORBOARD_PATH, session.graph)
+        summary_writer = tf.summary.FileWriter(os.path.join(training_setting['model_path'], TENSORBOARD_FOLDER), session.graph)
         saver = tf.train.Saver(name='saver')
 
         session.run(tf.global_variables_initializer())
         session.run(graph.get_operation_by_name('embedding/assign_pretrained_embeddings'),
-                    feed_dict={
-                        'inputs/pretrained_embeddings_ph:0': pretrained_embeddings
-                    })
+                    feed_dict={'inputs/pretrained_embeddings_ph:0': pretrained_embeddings})
         #run session and get back predictions
 
         batches_in_train = train_number_of_instances / training_setting['batch_size']
-        train_stat_interval = batches_in_train / training_setting['train_interval']
-        valid_stat_interval = batches_in_train / training_setting['valid_interval']
+        train_stat_interval = max(batches_in_train // training_setting['train_interval'], 1)
+        valid_stat_interval = max(batches_in_train // training_setting['valid_interval'], 1)
 
         y_true = list()
         y_pred = list()
         losses = list()
-        for batch_num, (X_batch, y_true_batch) in enumerate(train_batcher):
+        for batch_num, ((X_batch_sent1, X_batch_sent2, y_true_batch), new_start) in enumerate(train_batcher):
             iteration = batch_num * training_setting['batch_size']
             epoch = 1 + iteration // train_number_of_instances
+            if new_start:
+                y_true = list()
+                y_pred = list()
+                losses = list()
 
             if iteration > train_number_of_instances * training_setting['max_epoch']:
                 LOGGER.info('reached max epoch')
                 break
 
+            # LOGGER.info('batch num :{}'.format(batch_num))
+            # LOGGER.info('epoch num :{}'.format(epoch))
+            # LOGGER.info('iteration :{}'.format(iteration))
             _, y_pred_batch, loss = session.run(
                 [graph.get_operation_by_name('optimizer/optimizer'),
                  graph.get_tensor_by_name('mlp/y_pred:0'),
                  graph.get_tensor_by_name('loss/loss:0')],
                 feed_dict={
-                    'inputs/x:0': X_batch,
+                    'inputs/x_sent1:0': X_batch_sent1,
+                    'inputs/x_sent2:0': X_batch_sent2,
                     'inputs/y:0': y_true_batch,
                     'inputs/dropout:0': training_setting['dropout']
                 }
             )
-            y_true.extend(y_true_batch)
-            y_pred.extend(y_pred_batch)
-            losses.append(loss)
+
+            y_pred.extend(np.argmax(y_pred_batch, axis=1))
+            y_true.extend(np.argmax(y_true_batch, axis=1))
+            losses.extend(loss.tolist())
 
             if batch_num % train_stat_interval == 0:
-                losses, y_cat, y_cat_pred = show_train_stats(epoch, iteration, losses, y_true, y_pred)
+                show_train_stats(epoch, iteration, losses, y_true, y_pred)
 
             if batch_num % valid_stat_interval == 0:
                 best_valid_score, patience = validate(epoch, iteration, valid_batcher, best_valid_score, patience)
@@ -136,10 +135,5 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
                 LOGGER.info('Iteration is more than patience, finish training.')
                 break
 
-            LOGGER.info('Finished fitting the model.')
-            LOGGER.info('Best Validation Score (Accuracy - Cross-entropy Loss): {:.4f}'.format(best_valid_score))
-
-
-
-
-
+        LOGGER.info('Finished fitting the model.')
+        LOGGER.info('Best Validation Cross-entropy Loss: {:.4f}'.format(best_valid_score))
