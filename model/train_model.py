@@ -36,14 +36,13 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
         """Validate the model on validation set."""
 
         losses, y_true, y_pred = list(), list(), list()
-        for (X_batch_sent1, X_batch_sent2, y_true_batch), _ in batcher:
+        for (X_batch_sent, y_true_batch), _ in batcher:
 
             y_pred_batch, loss_batch = session.run(
                 [graph.get_tensor_by_name('mlp/y_pred:0'),
                  graph.get_tensor_by_name('loss/loss:0')],
                 feed_dict={
-                    'inputs/x_sent1:0': X_batch_sent1,
-                    'inputs/x_sent2:0': X_batch_sent2,
+                    'inputs/x_sent:0': X_batch_sent,
                     'inputs/y:0': y_true_batch,
                     'inputs/dropout:0': 1
                 })
@@ -94,7 +93,7 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
         y_true = list()
         y_pred = list()
         losses = list()
-        for batch_num, ((X_batch_sent1, X_batch_sent2, y_true_batch), new_start) in enumerate(train_batcher):
+        for batch_num, ((X_batch_sent, y_true_batch), new_start) in enumerate(train_batcher):
             iteration = batch_num * training_setting['batch_size']
             epoch = 1 + iteration // train_number_of_instances
             if new_start:
@@ -114,8 +113,7 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
                  graph.get_tensor_by_name('mlp/y_pred:0'),
                  graph.get_tensor_by_name('loss/loss:0')],
                 feed_dict={
-                    'inputs/x_sent1:0': X_batch_sent1,
-                    'inputs/x_sent2:0': X_batch_sent2,
+                    'inputs/x_sent:0': X_batch_sent,
                     'inputs/y:0': y_true_batch,
                     'inputs/dropout:0': training_setting['dropout']
                 }

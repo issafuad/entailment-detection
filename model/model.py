@@ -11,8 +11,7 @@ def build_graph(training_setting):
 
     with graph.as_default():
         with tf.name_scope('inputs') as name_scope:
-            X_sent1 = tf.placeholder(tf.int32, [None, training_setting['maximum_sent_length']], name='x_sent1')
-            X_sent2 = tf.placeholder(tf.int32, [None, training_setting['maximum_sent_length']], name='x_sent2')
+            X_sent = tf.placeholder(tf.int32, [None, training_setting['maximum_sent_length']], name='x_sent')
             y = tf.placeholder(tf.float32, [None, training_setting['classes_num']], name='y')
             dropout = tf.placeholder(tf.float32, shape=[], name='dropout')
 
@@ -38,58 +37,36 @@ def build_graph(training_setting):
                                                                        training_setting['embedding_size']], -1.0, 1.0),
                                                     trainable=True, name='pretrained_embeddings')
 
-            X_sent1 = tf.where(tf.less(X_sent1, tf.constant(training_setting['reserved_vocab_length'])), X_sent1 * 2,
-                         (X_sent1 - training_setting['reserved_vocab_length']) * 2 + 1)
-            X_sent2 = tf.where(tf.less(X_sent2, tf.constant(training_setting['reserved_vocab_length'])), X_sent2 * 2,
-                         (X_sent2 - training_setting['reserved_vocab_length']) * 2 + 1)
+            X_sent = tf.where(tf.less(X_sent, tf.constant(training_setting['reserved_vocab_length'])), X_sent * 2,
+                         (X_sent - training_setting['reserved_vocab_length']) * 2 + 1)
 
-            word_embeddings_sent1 = tf.nn.embedding_lookup([reserved_embeddings, pretrained_embeddings], X_sent1,
-                                                     name='word_embeddings_sent1')
-            word_embeddings_sent2 = tf.nn.embedding_lookup([reserved_embeddings, pretrained_embeddings], X_sent2,
-                                                     name='word_embeddings_sent2')
-            #word_embeddings_sent1 = tf_print(word_embeddings_sent1, 'word_embeddings_sent1')
+            word_embeddings_sent = tf.nn.embedding_lookup([reserved_embeddings, pretrained_embeddings], X_sent,
+                                                     name='word_embeddings_sent')
 
-        with tf.name_scope('gru_cell_sent1') as name_scope:
-            gru_forward_sent1 = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
-            gru_backward_sent1 = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
+            #word_embeddings_sent = tf_print(word_embeddings_sent, 'word_embeddings_sent')
 
-            (gru_output_forward, gru_output_backward), _ = nn.bidirectional_dynamic_rnn(gru_forward_sent1, gru_backward_sent1,
-                                                                                        word_embeddings_sent1,
+        with tf.name_scope('gru_cell_sent') as name_scope:
+            gru_forward_sent = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
+            gru_backward_sent = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
+
+            (gru_output_forward, gru_output_backward), _ = nn.bidirectional_dynamic_rnn(gru_forward_sent, gru_backward_sent,
+                                                                                        word_embeddings_sent,
                                                                                         dtype=tf.float32,
                                                                                         scope=name_scope)
-            bidirectional_gru_output_sent1 = tf.concat(axis=2, values=(gru_output_forward, gru_output_backward),
-                                                       name='output_sent1')
+            bidirectional_gru_output_sent = tf.concat(axis=2, values=(gru_output_forward, gru_output_backward),
+                                                       name='output_sent')
             #bidirectional_gru_output_sent1 = tf_print(bidirectional_gru_output_sent1, 'bidirectional_gru_output_sent1')
-
-        with tf.name_scope('gru_cell_sent2') as name_scope:
-            gru_forward_sent2 = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
-            gru_backward_sent2 = rnn.DropoutWrapper(rnn.GRUCell(training_setting['hidden_units']), output_keep_prob=dropout)
-
-            (gru_output_forward, gru_output_backward), _ = nn.bidirectional_dynamic_rnn(gru_forward_sent2, gru_backward_sent2,
-                                                                                        word_embeddings_sent2,
-                                                                                        dtype=tf.float32,
-                                                                                        scope=name_scope)
-            bidirectional_gru_output_sent2 = tf.concat(axis=2,
-                                                       values=(gru_output_forward, gru_output_backward),
-                                                       name='output_sent2')
-            #bidirectional_gru_output_sent2 = tf_print(bidirectional_gru_output_sent2, 'bidirectional_gru_output_sent2')
-
-        with tf.name_scope('concat') as name_scope:
-            both_sentences_concat = tf.concat(axis=1,
-                                              values=(bidirectional_gru_output_sent1, bidirectional_gru_output_sent2),
-                                              name='output_sentences')
-            #both_sentences_concat = tf_print(both_sentences_concat, 'both_sentences_concat')
 
         with tf.name_scope('pooling') as name_scope:
             W = tf.Variable(tf.random_normal([2 * training_setting['hidden_units']], name='attention_weight'))
             b = tf.Variable(tf.random_normal([1]), name='attention_bias')
             #W = tf_print(W, 'W')
-            attentions = tf.reduce_sum(tf.multiply(W, both_sentences_concat), axis=2) + b
+            attentions = tf.reduce_sum(tf.multiply(W, bidirectional_gru_output_sent), axis=2) + b
             attentions = tf.nn.softmax(attentions)
             #attentions = tf_print(attentions, 'attentions')
 
             expand_attentions = tf.expand_dims(attentions, 1)
-            transpose_outputs = tf.transpose(both_sentences_concat, perm=[0, 2, 1])
+            transpose_outputs = tf.transpose(bidirectional_gru_output_sent, perm=[0, 2, 1])
 
             attentions_output = tf.reduce_sum(tf.transpose(tf.multiply(expand_attentions, transpose_outputs),
                                                            perm=[0, 2, 1]), axis=1)

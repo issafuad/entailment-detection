@@ -10,10 +10,11 @@ class VocabProcessor(object):
 
     SENT_START = '__START__'
     SENT_END = '__END__'
-    UNKNOWN = '__UNKNOWN'
+    UNKNOWN = '__UNKNOWN__'
     PADDING = '__PADDED__'
+    SENT_SEPARATOR = '__SEP__'
 
-    PROCESSOR_RESERVED = [SENT_START, SENT_END, UNKNOWN, PADDING]
+    PROCESSOR_RESERVED = [SENT_START, SENT_END, UNKNOWN, PADDING, SENT_SEPARATOR]
 
     def __init__(self, vocab, reserved_vocab=list()):
         self.vocab_set = vocab
@@ -42,18 +43,25 @@ class VocabProcessor(object):
 
         return word_embeddings_all
 
-    def transform(self, X):
+    def transform(self, X_sent1, X_sent2):
         transformed_X = list()
 
-        for each_sent in X:
+        for each_sent1, each_sent2 in zip(X_sent1, X_sent2):
 
             transformed_words = list()
+
             transformed_words.append(self.vocab2id[self.SENT_START])
-
-            for each_word in each_sent:
+            for each_word in each_sent1:
                 transformed_words.append(self.vocab2id.get(each_word, self.vocab2id.get(each_word.lower(), self.vocab2id.get(self.UNKNOWN))))
-
             transformed_words.append(self.vocab2id[self.SENT_END])
+
+            transformed_words.append(self.vocab2id[self.SENT_SEPARATOR])
+
+            transformed_words.append(self.vocab2id[self.SENT_START])
+            for each_word in each_sent2:
+                transformed_words.append(self.vocab2id.get(each_word, self.vocab2id.get(each_word.lower(), self.vocab2id.get(self.UNKNOWN))))
+            transformed_words.append(self.vocab2id[self.SENT_END])
+
             transformed_X.append(transformed_words)
 
         return transformed_X
