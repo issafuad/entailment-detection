@@ -15,11 +15,11 @@ training_settings = {
     'embedding_size': 300,
     'batch_size': 128,
     'hidden_units': 32,
-    'learning_rate': 0.01,
-    'patience': 1024000,
-    'train_interval': 100,
-    'valid_interval': 10,
-    'max_epoch': 30,
+    'learning_rate': 0.1,
+    'patience': 10240000,
+    'train_interval': 1,
+    'valid_interval': 1,
+    'max_epoch': 100,
     'dropout':  0.7,
     'maximum_sent_length': None,
     'classes_num': None,
@@ -30,7 +30,7 @@ training_settings = {
 def train(training_settings):
 
     X_sent1, X_sent2, y = get_dataset(PROCESSED_DATA_FILE)
-    LOGGER.info('Got dataset')
+    LOGGER.info('Loaded dataset')
 
     all_sentences = X_sent1 + X_sent2
     label_encoder = LabelBinarizer()

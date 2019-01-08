@@ -17,7 +17,7 @@ class VocabProcessor(object):
     PROCESSOR_RESERVED = [SENT_START, SENT_END, UNKNOWN, PADDING, SENT_SEPARATOR]
 
     def __init__(self, vocab, reserved_vocab=list()):
-        self.vocab_set = vocab
+        self.vocab_set = set(vocab)
 
         self.reserved_vocab = self.PROCESSOR_RESERVED + reserved_vocab
         self.reserved_vocab_set = set(self.reserved_vocab)
@@ -27,14 +27,21 @@ class VocabProcessor(object):
         self.vocab2id = dict()
 
     def get_word2vec(self):
-        word2vec = KeyedVectors.load_word2vec_format(WORD2VEC, binary=True, limit=1000)
-        chosen_word_index_list = list()
+        LOGGER.info('Loading Word2Vec Vocabulary')
+        word2vec = KeyedVectors.load_word2vec_format(WORD2VEC, binary=True)
+        LOGGER.info('Finished loading Word2Vec Vocabulary. {} loaded'.format(word2vec.vectors.shape[0]))
+        chosen_word_index_set = set()
         for index, each_word in enumerate(word2vec.index2word):
 
-            if each_word in self.vocab_set and each_word not in self.reserved_vocab_set:
-                chosen_word_index_list.append(index)
-                self.embedding_vocab.append(each_word)
+            if not index % 100000:
+                LOGGER.info('checked {}/{}'.format(index, len(word2vec.index2word)))
 
+            if each_word in self.vocab_set and each_word not in self.reserved_vocab_set:
+                chosen_word_index_set.add(index)
+
+        LOGGER.info('Found {}/{} of dataset vocab'.format(len(chosen_word_index_set), len(self.vocab_set)))
+        chosen_word_index_list = list(chosen_word_index_set)
+        self.embedding_vocab = [word2vec.index2word[each] for each in chosen_word_index_list]
         self.all_vocab = self.reserved_vocab + self.embedding_vocab
         self.vocab2id = {vocab: index for index, vocab in enumerate(self.all_vocab)}
         word_embeddings = word2vec.vectors[chosen_word_index_list]
