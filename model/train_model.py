@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.metrics import classification_report, accuracy_score
 import tensorflow as tf
 
-from model.model import build_graph
+from model.tf_model import build_graph
 from settings import TRAINED_MODELS_PATH, LOGGER
 
 
