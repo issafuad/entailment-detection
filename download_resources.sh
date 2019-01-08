@@ -1,4 +1,4 @@
-wget https://github.com/mmihaltz/word2vec-GoogleNews-vectors/blob/master/GoogleNews-vectors-negative300.bin.gz -P data/
+wget -c "https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz" -P data/
 wget https://nlp.stanford.edu/projects/snli/snli_1.0.zip -P data/
 apt-get install unzip
 unzip ./data/snli_1.0.zip -d ./data/
