@@ -20,7 +20,7 @@ if __name__ == '__main__':
     dataset_df_dev = pd.read_json(DEV_DATA_FILE, lines=True)
     dataset_df_test = pd.read_json(TEST_DATA_FILE, lines=True)
     dataset_df_train['type'] = 'train'
-    dataset_df_test['type'] = 'text'
+    dataset_df_test['type'] = 'test'
     dataset_df_dev['type'] = 'dev'
 
     dataset_df = dataset_df_train.append(dataset_df_dev, ignore_index=True)

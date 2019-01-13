@@ -39,7 +39,7 @@ def train(training_settings):
 
     y_train = label_encoder.transform(y_train)
     y_dev = label_encoder.transform(y_dev)
-    y_test = label_encoder.transform(y_test)
+    #y_test = label_encoder.transform(y_test)
 
     vocab = [each for each_sent in all_sentences for each in each_sent]
     vocab_processor = VocabProcessor(vocab)
