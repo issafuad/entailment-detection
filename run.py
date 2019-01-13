@@ -58,8 +58,8 @@ def train(training_settings):
     X_sent_dev_input, y_dev = shuffle(X_sent_padded_dev, y_dev)
 
     train_batcher = batcher([X_sent_train_input, y_train], training_settings['batch_size'], infinite=True)
-    valid_batcher = batcher([X_sent_padded_dev, y_dev], training_settings['batch_size'])
-    train_number_of_instance = len(X_sent_padded_train)
+    valid_batcher = batcher([X_sent_dev_input, y_dev], training_settings['batch_size'])
+    train_number_of_instance = len(X_sent_train_input)
 
     training_settings['classes_num'] = len(label_encoder.classes_)
 
