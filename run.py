@@ -1,6 +1,5 @@
 __author__ = 'fuadissa'
 
-from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from sklearn.preprocessing import LabelBinarizer
 
@@ -29,12 +28,18 @@ training_settings = {
 
 def train(training_settings):
 
-    X_sent1, X_sent2, y = get_dataset(PROCESSED_DATA_FILE)
+    X_sent1_train, X_sent2_train, y_train,\
+        X_sent1_dev, X_sent2_dev, y_dev,\
+        X_sent1_test, X_sent2_test, y_test = get_dataset(PROCESSED_DATA_FILE)
     LOGGER.info('Loaded dataset')
 
-    all_sentences = X_sent1 + X_sent2
+    all_sentences = X_sent1_train + X_sent2_train + X_sent1_dev + X_sent2_dev
     label_encoder = LabelBinarizer()
-    y = label_encoder.fit_transform(y)
+    label_encoder.fit(y_train + y_dev + y_test)
+
+    y_train = label_encoder.transform(y_train)
+    y_dev = label_encoder.transform(y_dev)
+    y_test = label_encoder.transform(y_test)
 
     vocab = [each for each_sent in all_sentences for each in each_sent]
     vocab_processor = VocabProcessor(vocab)
@@ -42,16 +47,20 @@ def train(training_settings):
     training_settings['reserved_vocab_length'] = len(vocab_processor.embedding_vocab)
     training_settings['pretrained_vocab_length'] = len(vocab_processor.reserved_vocab)
 
-    X_sent_transformed = vocab_processor.transform(X_sent1, X_sent2)
+    X_sent_transformed_train = vocab_processor.transform(X_sent1_train, X_sent2_train)
+    X_sent_transformed_dev = vocab_processor.transform(X_sent1_train, X_sent2_train)
 
-    padding_size = max([len(each) for each in X_sent_transformed])
-    X_sent_padded = vocab_processor.pad(X_sent_transformed, padding_size)
+    padding_size = max([len(each) for each in X_sent_transformed_train + X_sent_transformed_dev])
+    X_sent_padded_train = vocab_processor.pad(X_sent_transformed_train, padding_size)
+    X_sent_padded_dev = vocab_processor.pad(X_sent_transformed_dev, padding_size)
 
-    X_sent_train, X_sent_test, y_train, y_test = train_test_split(X_sent_padded, y, test_size=0.2, random_state=0)
+    X_sent_train_input, y_train = shuffle(X_sent_padded_train, y_train)
+    X_sent_dev_input, y_dev = shuffle(X_sent_padded_dev, y_dev)
 
-    train_batcher = batcher([X_sent_train, y_train], training_settings['batch_size'], infinite=True)
-    valid_batcher = batcher([X_sent_test, y_test], training_settings['batch_size'])
-    train_number_of_instance = len(X_sent_test)
+    train_batcher = batcher([X_sent_train_input, y_train], training_settings['batch_size'], infinite=True)
+    valid_batcher = batcher([X_sent_padded_dev, y_dev], training_settings['batch_size'])
+    train_number_of_instance = len(X_sent_padded_train)
+
     training_settings['classes_num'] = len(label_encoder.classes_)
 
     LOGGER.info('Number of training instances : {}'.format(train_number_of_instance))
