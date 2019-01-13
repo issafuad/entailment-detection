@@ -5,8 +5,8 @@ import pandas as pd
 
 def get_dataset(file_path, limit=None):
     def get_X_and_y(dataframe):
-        x_sent1 = dataframe['sentence1_tokenized'].tolist()
-        x_sent2 = dataframe['sentence2_tokenized'].tolist()
+        X_sent1 = dataframe['sentence1_tokenized'].tolist()
+        X_sent2 = dataframe['sentence2_tokenized'].tolist()
         y = dataframe['gold_label'].tolist()
         return X_sent1, X_sent2, y
 
