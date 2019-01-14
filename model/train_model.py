@@ -75,7 +75,7 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
     graph = build_graph(training_setting)
     pretrained_embeddings = embedding[training_setting['reserved_vocab_length']:]
     patience = training_setting['patience']
-    best_valid_score = np.float64('-inf')
+    best_valid_loss = np.float64('inf')
     with tf.Session(graph=graph) as session:
 
         summary_writer = tf.summary.FileWriter(os.path.join(training_setting['model_path'], TENSORBOARD_FOLDER), session.graph)
@@ -127,11 +127,11 @@ def train_network(training_setting, train_batcher, valid_batcher, embedding, tra
                 show_train_stats(epoch, iteration, losses, y_true, y_pred)
 
             if batch_num % valid_stat_interval == 0:
-                best_valid_score, patience = validate(epoch, iteration, valid_batcher, best_valid_score, patience)
+                best_valid_loss, patience = validate(epoch, iteration, valid_batcher, best_valid_loss, patience)
 
             if iteration > patience:
                 LOGGER.info('Iteration is more than patience, finish training.')
                 break
 
         LOGGER.info('Finished fitting the model.')
-        LOGGER.info('Best Validation Cross-entropy Loss: {:.4f}'.format(best_valid_score))
+        LOGGER.info('Best Validation Cross-entropy Loss: {:.4f}'.format(best_valid_loss))
