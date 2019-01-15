@@ -2,35 +2,29 @@ __author__ = 'fuadissa'
 
 from sklearn.utils import shuffle
 from sklearn.preprocessing import LabelBinarizer
+import argparse
 
 from processing.vocab_processor import VocabProcessor
 from processing.input_processing import get_dataset, batcher
 from model.train_model import train_network
 from settings import PROCESSED_DATA_FILE, LOGGER, PARTIAL_PROCESSED_DATA_FILE
 
-training_settings = {
-    'model_path': './trained_models/test/',
-    'use_pretrained_embeddings': True,
-    'embedding_size': 300,
-    'batch_size': 128,
-    'hidden_units': 32,
-    'learning_rate': 1,
-    'patience': 10240000,
-    'train_interval': 5,
-    'valid_interval': 2,
-    'max_epoch': 100,
-    'dropout':  0.7,
-    'maximum_sent_length': None,
-    'classes_num': None,
-    'reserved_vocab_length': None,
-    'pretrained_vocab_length': None,
-}
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 def train(training_settings):
+    LOGGER.info('Start Training')
 
-    X_sent1_train, X_sent2_train, y_train,\
-        X_sent1_dev, X_sent2_dev, y_dev,\
-        X_sent1_test, X_sent2_test, y_test = get_dataset(PROCESSED_DATA_FILE)
+    X_sent1_train, X_sent2_train, y_train, \
+    X_sent1_dev, X_sent2_dev, y_dev, \
+    X_sent1_test, X_sent2_test, y_test = get_dataset(PROCESSED_DATA_FILE)
     LOGGER.info('Loaded dataset')
 
     all_sentences = X_sent1_train + X_sent2_train + X_sent1_dev + X_sent2_dev
@@ -39,7 +33,7 @@ def train(training_settings):
 
     y_train = label_encoder.transform(y_train)
     y_dev = label_encoder.transform(y_dev)
-    #y_test = label_encoder.transform(y_test)
+    # y_test = label_encoder.transform(y_test)
 
     vocab = [each for each_sent in all_sentences for each in each_sent]
     vocab_processor = VocabProcessor(vocab)
@@ -70,5 +64,22 @@ def train(training_settings):
                   embedding,
                   train_number_of_instance)
 
+
+def get_arguments():
+    parser = argparse.ArgumentParser(description='Parameters of the model')
+    parser.add_argument('model_path', type=str)
+    parser.add_argument('--use_pretrained_embeddings', nargs='?', type=str2bool, default=True)
+    parser.add_argument('--embedding_size', nargs='?', type=int, default=300)
+    parser.add_argument('--batch_size', nargs='?', type=int, default=128)
+    parser.add_argument('--hidden_units', nargs='?', type=int, default=32)
+    parser.add_argument('--learning_rate', nargs='?', type=int, default=1)
+    parser.add_argument('--patience', nargs='?', type=int, default=10240000)
+    parser.add_argument('--train_interval', nargs='?', type=int, default=5)
+    parser.add_argument('--valid_interval', nargs='?', type=int, default=2)
+    parser.add_argument('--dropout', nargs='?', type=float, default=0.7)
+    return vars(parser.parse_args())
+
+
 if __name__ == '__main__':
+    training_settings = get_arguments()
     train(training_settings)

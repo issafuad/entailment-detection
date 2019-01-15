@@ -16,7 +16,8 @@ def get_dataset(file_path, limit=None):
         dataset_df = dataset_df.head(limit)
 
     dataset_df['accepted'] = True
-    dataset_df.loc[dataset_df['gold_label'].apply(lambda x: x not in set(['contradiction', 'neutral', 'entailment'])),'accepted'] = False
+    dataset_df.loc[dataset_df['gold_label'].apply(
+        lambda x: x not in set(['contradiction', 'neutral', 'entailment'])), 'accepted'] = False
     dataset_df.drop(dataset_df[dataset_df['accepted'] == False].index, inplace=True)
 
     dataset_df_train = dataset_df[dataset_df['type'] == 'train']
@@ -28,6 +29,7 @@ def get_dataset(file_path, limit=None):
     X_sent1_test, X_sent2_test, y_test = get_X_and_y(dataset_df_test)
 
     return X_sent1_train, X_sent2_train, y_train, X_sent1_dev, X_sent2_dev, y_dev, X_sent1_test, X_sent2_test, y_test
+
 
 def batcher(lists_to_batch, batch_size, infinite=False):
     length_of_list = len(lists_to_batch[0])

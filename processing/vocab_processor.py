@@ -6,8 +6,8 @@ from settings import WORD2VEC
 from gensim.models import KeyedVectors
 from settings import LOGGER
 
-class VocabProcessor(object):
 
+class VocabProcessor(object):
     SENT_START = '__START__'
     SENT_END = '__END__'
     UNKNOWN = '__UNKNOWN__'
@@ -59,14 +59,16 @@ class VocabProcessor(object):
 
             transformed_words.append(self.vocab2id[self.SENT_START])
             for each_word in each_sent1:
-                transformed_words.append(self.vocab2id.get(each_word, self.vocab2id.get(each_word.lower(), self.vocab2id.get(self.UNKNOWN))))
+                transformed_words.append(
+                    self.vocab2id.get(each_word, self.vocab2id.get(each_word.lower(), self.vocab2id.get(self.UNKNOWN))))
             transformed_words.append(self.vocab2id[self.SENT_END])
 
             transformed_words.append(self.vocab2id[self.SENT_SEPARATOR])
 
             transformed_words.append(self.vocab2id[self.SENT_START])
             for each_word in each_sent2:
-                transformed_words.append(self.vocab2id.get(each_word, self.vocab2id.get(each_word.lower(), self.vocab2id.get(self.UNKNOWN))))
+                transformed_words.append(
+                    self.vocab2id.get(each_word, self.vocab2id.get(each_word.lower(), self.vocab2id.get(self.UNKNOWN))))
             transformed_words.append(self.vocab2id[self.SENT_END])
 
             transformed_X.append(transformed_words)
@@ -89,4 +91,3 @@ class VocabProcessor(object):
         LOGGER.info('number of shortened sentences : {}'.format(sentences_cut_counter))
 
         return padded_X
-

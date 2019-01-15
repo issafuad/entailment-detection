@@ -20,7 +20,6 @@ TEST_DATA_FILE = os.path.join(DATA_FILE_PATH, 'snli_1.0_test.json')
 TRAIN_DATA_FILE = os.path.join(DATA_FILE_PATH, 'snli_1.0_train.json')
 DEV_DATA_FILE = os.path.join(DATA_FILE_PATH, 'snli_1.0_dev.json')
 PROCESSED_DATA_FILE = os.path.join(DATA_FILE_PATH, 'snli_processed.pkl')
-PARTIAL_PROCESSED_DATA_FILE = os.path.join(DATA_FILE_PATH, 'snli_processed_partial.pkl')
 WORD2VEC = os.path.join(DATA_FILE_PATH, 'GoogleNews-vectors-negative300.bin')
 
 
