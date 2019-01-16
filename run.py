@@ -45,6 +45,7 @@ def train(training_settings):
     X_sent_transformed_dev = vocab_processor.transform(X_sent1_dev, X_sent2_dev)
 
     padding_size = max([len(each) for each in X_sent_transformed_train + X_sent_transformed_dev])
+    training_settings['maximum_sent_length'] = padding_size
     X_sent_padded_train = vocab_processor.pad(X_sent_transformed_train, padding_size)
     X_sent_padded_dev = vocab_processor.pad(X_sent_transformed_dev, padding_size)
 
