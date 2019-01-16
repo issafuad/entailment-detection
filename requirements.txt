@@ -1,4 +1,4 @@
-tensorflow
-sklearn
-pandas
-gensim
+tensorflow==1.11.0
+scikit-learn==0.20.0
+pandas==0.23.4
+gensim==3.6.0
