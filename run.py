@@ -77,8 +77,8 @@ def get_arguments():
     parser.add_argument('--train_interval', nargs='?', type=int, default=5)
     parser.add_argument('--valid_interval', nargs='?', type=int, default=2)
     parser.add_argument('--dropout', nargs='?', type=float, default=0.7)
+    parser.add_argument('--max_epoch', nargs='?', type=int, default=200)
     return vars(parser.parse_args())
-
 
 if __name__ == '__main__':
     training_settings = get_arguments()
