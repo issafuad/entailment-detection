@@ -7,7 +7,7 @@ import argparse
 from processing.vocab_processor import VocabProcessor
 from processing.input_processing import get_dataset, batcher
 from model.train_model import train_network
-from settings import PROCESSED_DATA_FILE, LOGGER, PARTIAL_PROCESSED_DATA_FILE
+from settings import PROCESSED_DATA_FILE, LOGGER
 
 
 def str2bool(v):
