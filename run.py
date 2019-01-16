@@ -72,7 +72,7 @@ def get_arguments():
     parser.add_argument('--embedding_size', nargs='?', type=int, default=300)
     parser.add_argument('--batch_size', nargs='?', type=int, default=128)
     parser.add_argument('--hidden_units', nargs='?', type=int, default=32)
-    parser.add_argument('--learning_rate', nargs='?', type=int, default=1)
+    parser.add_argument('--learning_rate', nargs='?', type=float, default=1.0)
     parser.add_argument('--patience', nargs='?', type=int, default=10240000)
     parser.add_argument('--train_interval', nargs='?', type=int, default=5)
     parser.add_argument('--valid_interval', nargs='?', type=int, default=2)
