@@ -1,6 +1,6 @@
 # Entailment Detection
 (still in progress)
-This project aims to re-implement entailment detection [paper](https://arxiv.org/pdf/1509.06664.pdf) "Reasoning About Entailment With Neural Attention". Currently what's implemented is s baseline simpler attention mechanism
+This project aims to re-implement entailment detection [paper](https://arxiv.org/pdf/1509.06664.pdf) "Reasoning About Entailment With Neural Attention". Currently what's implemented is a similar architecture with a simpler attention mechanism
 
 # How to Use
 Build the docker images using:
